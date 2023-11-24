@@ -16,19 +16,19 @@
 #include "sift_scores.hpp"
 #include "sift_prediction.hpp"
 
-constexpr uint32_t kMaxSequences = 400;
 
 class ThreadPredictionData {
 public:
     ThreadPredictionData(std::vector<Chain*>& _alignment_strings, Chain* _query, const std::string& _subst_path,
-        int32_t _sequence_identity, const std::string& _out_path)
+        int32_t _sequence_identity, uint32_t _max_alignments, const std::string& _out_path)
             : alignment_strings(_alignment_strings), query(_query), sequence_identity(_sequence_identity),
-            subst_path(_subst_path), out_path(_out_path) {
+            subst_path(_subst_path), max_alignments(_max_alignments), out_path(_out_path) {
     }
 
     std::vector<Chain*>& alignment_strings;
     Chain* query;
     int32_t sequence_identity;
+    uint32_t max_alignments;
     std::string subst_path;
     std::string out_path;
 };
@@ -143,7 +143,7 @@ void checkData(Chain** queries, int32_t& queries_length, const std::string& subs
 
 void siftPredictions(std::vector<std::vector<Chain*>>& alignment_strings,
     Chain** queries, int32_t queries_length, const std::string& subst_path,
-    int32_t sequence_identity, const std::string& out_path) {
+    int32_t sequence_identity, uint32_t max_alignments, const std::string& out_path){
 
     fprintf(stderr, "** Generating SIFT predictions with sequence identity: %.2f%% **\n", (float) sequence_identity);
 
@@ -156,7 +156,7 @@ void siftPredictions(std::vector<std::vector<Chain*>>& alignment_strings,
         }
 
         auto thread_data = new ThreadPredictionData(alignment_strings[i], queries[i],
-            subst_path, sequence_identity, out_path);
+            subst_path, sequence_identity, max_alignments, out_path);
 
         thread_tasks[i] = threadPoolSubmit(threadSiftPredictions, (void*) thread_data);
     }
@@ -181,11 +181,11 @@ void* threadSiftPredictions(void* params) {
     std::string out_extension = ".SIFTprediction";
 
     // only keep first 399 hits, erase more distant ones
-    if (thread_data->alignment_strings.size() > kMaxSequences - 1) {
-        for (uint32_t j = kMaxSequences - 1; j < thread_data->alignment_strings.size(); ++j) {
+    if (thread_data->alignment_strings.size() > thread_data->max_alignments - 1) {
+        for (uint32_t j = thread_data->max_alignments - 1; j < thread_data->alignment_strings.size(); ++j) {
             chainDelete(thread_data->alignment_strings[j]);
         }
-        thread_data->alignment_strings.resize(kMaxSequences - 1);
+        thread_data->alignment_strings.resize(thread_data->max_alignments - 1);
     }
 
     int query_length = chainGetLength(thread_data->query);

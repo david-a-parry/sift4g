@@ -20,7 +20,6 @@
 #include "constants.hpp"
 #include "sift_scores.hpp"
 
-constexpr uint32_t kMaxSequences = 400;
 constexpr double TOLERANCE_PROB_THRESHOLD = 0.05;
 constexpr double ADEQUATE_SEQ_INFO =3.25;
 // init_frq_qij
